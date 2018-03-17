@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/big"
@@ -8,7 +9,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	//	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -59,6 +60,22 @@ func deploy() error {
 	return err
 }
 
+func transactionSummary(hash common.Hash) {
+	conn, err := ethclient.Dial("geth.ipc")
+	if err != nil {
+		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
+		return
+	}
+	ctx := context.Background()
+	tx, pending, err := conn.TransactionByHash(ctx, hash)
+	//common.HexToHash("0x378674bebd1430d9ce63adc792c573da56e69b8d6c97174c93a43c5991ae0d61"))
+	if err != nil {
+		log.Fatalf("Failed to get transaction details: %v", err)
+		return
+	}
+	fmt.Printf("Transaction pending %v details: %v\n", pending, tx.String())
+}
+
 func get() (*big.Int, error) {
 	val, err := session.Get()
 	if err != nil {
@@ -69,20 +86,21 @@ func get() (*big.Int, error) {
 	return val, err
 }
 
-func set(val *big.Int) error {
+func set(val *big.Int) (common.Hash, error) {
 	tx, err := session.Set(val)
 	if err != nil {
 		log.Fatalf("Set Failed to set storage: %v", err)
-		return err
+		return common.StringToHash(""), err
 	}
 	fmt.Printf("Hash of Transaction for Set: 0x%x\n\n", tx.Hash())
-	return err
+	return tx.Hash(), err
 }
 
 func main() {
 	deploy()
 	time.Sleep(250 * time.Millisecond)
-	set(big.NewInt(100))
+	hash, _ := set(big.NewInt(100))
 	time.Sleep(500 * time.Millisecond)
 	get()
+	transactionSummary(hash)
 }
