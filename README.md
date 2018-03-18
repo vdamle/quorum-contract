@@ -2,7 +2,7 @@
 This repo contains code that implements APIs to interact with a quorum
 cluster to deploy and interact with a smart contract
 
-## Steps
+## Steps to build/deploy server
 
 * Build the go bindings code for the contract (one time only)
 ```
@@ -15,18 +15,26 @@ abigen --sol storage.sol --pkg main --out storage.go
 cd <repo root>
 go build .
 ```
-
-* Copy the go executable to the path which is visible in docker (`/qdata/ethereum`).
-  This will be `build/docker/tests/tmp/qdata_1/ethereum` if you want to interact with
-  node1
-
-* Launch a bash shell for docker and run the go executable
+* Run the API server
 ```
-docker exec -it <id> bash
-cd /qdata/ethereum
-./quorum-contract
+./quorum-contract -h
+
+Usage of ./quorum-contract:
+  -host string
+        hostname of quorum node (default "localhost")
+  -listen_port int
+        port on which to listen for incoming requests (default 8080)
+  -port int
+        geth rpc port (default 22001)
 ```
 
+* Send curl requests from another terminal. Examples below:
+```
+curl -X POST http://localhost:8080/deploy               --- deploys contract
+curl -X POST http://localhost:8080/set?data=90          --- sets value
+curl -X GET http://localhost:8080/get                  --- gets value
+curl -X POST http://localhost:8080/summary?hash=<hash>  --- use hash from return value of set api
+```
 ## Prerequisites
 
 * Quorum nodes have been instantiated
