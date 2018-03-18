@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,9 +19,14 @@ const key = `{"address":"f29f27dacb6c2b616c2552cb0c7a3c7ff5b64d16","crypto":{"ci
 
 var session *SimpleStorageSession
 
+// url to connect to
+var url string
+
+// Deploy a contract to a cluster of quorum nodes
 func deploy() error {
-	// connect to geth
-	conn, err := ethclient.Dial("geth.ipc")
+	// connect to geth; docker container for quorum is
+	// port 8545 to port 22001
+	conn, err := ethclient.Dial(url)
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 		return err
@@ -60,8 +67,9 @@ func deploy() error {
 	return err
 }
 
+// Display summary of a transaction using its hash
 func transactionSummary(hash common.Hash) {
-	conn, err := ethclient.Dial("geth.ipc")
+	conn, err := ethclient.Dial(url)
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 		return
@@ -73,9 +81,11 @@ func transactionSummary(hash common.Hash) {
 		log.Fatalf("Failed to get transaction details: %v", err)
 		return
 	}
-	fmt.Printf("Transaction pending %v details: %v\n", pending, tx.String())
+	fmt.Printf("Transaction pending %v details: %v\n",
+		pending, tx.String())
 }
 
+// Get stored value from contract
 func get() (*big.Int, error) {
 	val, err := session.Get()
 	if err != nil {
@@ -86,6 +96,7 @@ func get() (*big.Int, error) {
 	return val, err
 }
 
+// Set value in contract
 func set(val *big.Int) (common.Hash, error) {
 	tx, err := session.Set(val)
 	if err != nil {
@@ -97,6 +108,16 @@ func set(val *big.Int) (common.Hash, error) {
 }
 
 func main() {
+	// parse hostname and port
+	var hostname string
+	var port int
+
+	flag.StringVar(&hostname, "host", "localhost",
+		"hostname of quorum node")
+	flag.IntVar(&port, "port", 22001, "geth rpc port")
+	flag.Parse()
+	url = "http://" + hostname + ":" + strconv.Itoa(port)
+
 	deploy()
 	time.Sleep(250 * time.Millisecond)
 	hash, _ := set(big.NewInt(100))
